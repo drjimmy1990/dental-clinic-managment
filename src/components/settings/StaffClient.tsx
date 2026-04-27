@@ -19,6 +19,12 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.full_name || !formData.email || !formData.password) {
+      setError('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+    
     setIsSubmitting(true);
     setError('');
 
@@ -139,7 +145,6 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
                   <input 
                     className="form-input" 
                     type="text" 
-                    required 
                     value={formData.full_name}
                     onChange={e => setFormData({...formData, full_name: e.target.value})}
                   />
@@ -150,7 +155,6 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
                   <input 
                     className="form-input" 
                     type="email" 
-                    required 
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
                     placeholder="example@clinic.com"
@@ -162,8 +166,6 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
                   <input 
                     className="form-input" 
                     type="password" 
-                    required 
-                    minLength={6}
                     value={formData.password}
                     onChange={e => setFormData({...formData, password: e.target.value})}
                   />
