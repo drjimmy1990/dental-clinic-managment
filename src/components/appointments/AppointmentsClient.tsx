@@ -41,6 +41,7 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
 
   const [completeModal, setCompleteModal] = useState<AppointmentRow | null>(null);
   const [completeForm, setCompleteForm] = useState({
+    type: '',
     cost: '',
     paid: '',
     method: 'cash',
@@ -114,7 +115,7 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
     const result = await completeAppointmentFlow({
       appointment_id: completeModal.id,
       patient_id: completeModal.patient_id,
-      type: completeModal.type,
+      type: completeForm.type || completeModal.type,
       cost: Number(completeForm.cost),
       paid_amount: Number(completeForm.paid),
       payment_method: completeForm.method,
@@ -125,7 +126,7 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
     
     setAppointments(prev => prev.map(a => a.id === completeModal.id ? { ...a, status: 'attended' } : a));
     setCompleteModal(null);
-    setCompleteForm({ cost: '', paid: '', method: 'cash', notes: '' });
+    setCompleteForm({ type: '', cost: '', paid: '', method: 'cash', notes: '' });
     setLoading(false);
   };
 
@@ -202,7 +203,7 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
                     {appt.status === 'upcoming' && (
                       <>
                         <button className="btn btn-sm" style={{ background: 'rgba(0,214,143,0.15)', color: 'var(--green)', border: 'none', fontSize: 11 }}
-                          onClick={() => setCompleteModal(appt)}>حضر ✓</button>
+                          onClick={() => { setCompleteModal(appt); setCompleteForm(f => ({ ...f, type: appt.type })); }}>حضر ✓</button>
                         <button className="btn btn-sm" style={{ background: 'rgba(240,180,41,0.15)', color: 'var(--gold)', border: 'none', fontSize: 11 }}
                           onClick={() => handleStatusChange(appt.id, 'postponed')}>تأجيل</button>
                       </>
@@ -308,8 +309,8 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
           {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
           <div className="form-grid">
             <div className="form-group full">
-              <label className="form-label">نوع الإجراء *</label>
-              <input className="form-input" value={completeModal?.type || ''} disabled />
+              <label className="form-label">نوع الإجراء (العلاج) *</label>
+              <input className="form-input" value={completeForm.type} onChange={e => setCompleteForm(f => ({ ...f, type: e.target.value }))} required />
             </div>
             <div className="form-group">
               <label className="form-label">إجمالي التكلفة (ج.م) *</label>
