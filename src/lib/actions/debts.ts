@@ -9,12 +9,12 @@ type ActionResult = {
   data?: Record<string, unknown>;
 };
 
-async function getClinicId() {
+async function getUserInfo() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single();
-  return profile?.clinic_id || null;
+  const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single();
+  return profile || null;
 }
 
 export async function getDebts(): Promise<ActionResult> {
@@ -37,13 +37,13 @@ export async function createDebt(input: {
   notes?: string;
 }): Promise<ActionResult> {
   const supabase = await createClient();
-  const clinicId = await getClinicId();
-  if (!clinicId) return { success: false, error: 'غير مسجل دخول' };
+  const userInfo = await getUserInfo();
+  if (!userInfo) return { success: false, error: 'غير مسجل دخول' };
 
   const { data, error } = await supabase
     .from('debts')
     .insert({
-      clinic_id: clinicId,
+      clinic_id: userInfo.clinic_id,
       direction: input.direction,
       patient_id: input.patient_id || null,
       supplier_id: input.supplier_id || null,
@@ -83,6 +83,13 @@ export async function updateDebtPayment(id: string, paymentAmount: number): Prom
 }
 
 export async function deleteDebt(id: string): Promise<ActionResult> {
+  const userInfo = await getUserInfo();
+  if (!userInfo) return { success: false, error: 'غير مسجل دخول' };
+  
+  if (userInfo.role === 'secretary' || userInfo.role === 'assistant' || userInfo.role === 'technician') {
+    return { success: false, error: 'غير مصرح لك بحذف الديون' };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from('debts').delete().eq('id', id);
   if (error) return { success: false, error: error.message };

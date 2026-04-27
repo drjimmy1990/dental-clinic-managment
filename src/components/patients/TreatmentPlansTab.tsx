@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Modal from '../ui/Modal';
 import { createTreatmentPlan, payForTreatmentPlan } from '@/lib/actions/plans';
 
-export default function TreatmentPlansTab({ patientId, plans }: { patientId: string; plans: any[] }) {
+export default function TreatmentPlansTab({ patientId, plans, userRole }: { patientId: string; plans: any[]; userRole?: string }) {
   const [isAdding, setIsAdding] = useState(false);
   const [activePayPlan, setActivePayPlan] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,9 @@ export default function TreatmentPlansTab({ patientId, plans }: { patientId: str
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h3 style={{ margin: 0 }}>خطط العلاج الشاملة (التقويم / الزراعة)</h3>
-        <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>+ خطة جديدة</button>
+        {(userRole === 'owner' || userRole === 'doctor') && (
+          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>+ خطة جديدة</button>
+        )}
       </div>
 
       {!plans || plans.length === 0 ? (

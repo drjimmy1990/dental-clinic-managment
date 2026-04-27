@@ -74,6 +74,10 @@ export default async function PatientDetailPage({ params }: PageProps) {
     .eq('id', patient.clinic_id)
     .single();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user ? await supabase.from('users').select('role').eq('id', user.id).single() : { data: null };
+  const userRole = profile?.role || 'assistant';
+
   return (
     <>
       <div className="sec-header">
@@ -165,6 +169,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
           <TreatmentPlansTab 
             patientId={id} 
             plans={treatmentPlans || []} 
+            userRole={userRole}
           />
         </div>
       </div>

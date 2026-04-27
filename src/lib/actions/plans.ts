@@ -3,23 +3,28 @@
 import { createClient } from '../supabase/server';
 import { revalidatePath } from 'next/cache';
 
-export async function createTreatmentPlan(data: { patient_id: string; name: string; total_cost: number }) {
+async function getUserInfo() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  if (!user) return null;
+  const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single();
+  return profile || null;
+}
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('clinic_id')
-    .eq('id', user.id)
-    .single();
+export async function createTreatmentPlan(data: { patient_id: string; name: string; total_cost: number }) {
+  const userInfo = await getUserInfo();
+  if (!userInfo) throw new Error('Unauthorized');
 
-  if (!profile) throw new Error('Profile not found');
+  if (userInfo.role === 'secretary' || userInfo.role === 'assistant' || userInfo.role === 'technician') {
+    throw new Error('غير مصرح لك بإضافة خطط علاج وتحديد أسعار');
+  }
+
+  const supabase = await createClient();
 
   const { data: plan, error } = await supabase
     .from('treatment_plans')
     .insert({
-      clinic_id: profile.clinic_id,
+      clinic_id: userInfo.clinic_id,
       patient_id: data.patient_id,
       name: data.name,
       total_cost: data.total_cost,
@@ -33,7 +38,7 @@ export async function createTreatmentPlan(data: { patient_id: string; name: stri
 
   // Create a debt record for this plan so it appears in the main debts list
   await supabase.from('debts').insert({
-    clinic_id: profile.clinic_id,
+    clinic_id: userInfo.clinic_id,
     patient_id: data.patient_id,
     direction: 'patient_owes',
     total_amount: data.total_cost,
@@ -47,16 +52,13 @@ export async function createTreatmentPlan(data: { patient_id: string; name: stri
 }
 
 export async function payForTreatmentPlan(data: { plan_id: string; patient_id: string; amount: number; method: string }) {
+  const userInfo = await getUserInfo();
+  if (!userInfo) throw new Error('Unauthorized');
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-
-  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single();
-  if (!profile) throw new Error('Profile not found');
 
   // 1. Create payment record linked to the plan
   const { error: paymentError } = await supabase.from('payments').insert({
-    clinic_id: profile.clinic_id,
+    clinic_id: userInfo.clinic_id,
     patient_id: data.patient_id,
     treatment_plan_id: data.plan_id,
     amount: data.amount,

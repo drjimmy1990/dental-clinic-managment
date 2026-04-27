@@ -10,12 +10,12 @@ type ActionResult = {
   data?: Record<string, unknown>;
 };
 
-async function getClinicId() {
+async function getUserInfo() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single();
-  return profile?.clinic_id || null;
+  const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single();
+  return profile || null;
 }
 
 export async function getPayments(): Promise<ActionResult> {
@@ -33,12 +33,12 @@ export async function createPayment(input: PaymentInput): Promise<ActionResult> 
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const clinicId = await getClinicId();
-  if (!clinicId) return { success: false, error: 'غير مسجل دخول' };
+  const userInfo = await getUserInfo();
+  if (!userInfo) return { success: false, error: 'غير مسجل دخول' };
 
   const { data, error } = await supabase
     .from('payments')
-    .insert({ ...parsed.data, clinic_id: clinicId })
+    .insert({ ...parsed.data, clinic_id: userInfo.clinic_id })
     .select('*, patient:patients(id, full_name, code)')
     .single();
 
@@ -49,6 +49,13 @@ export async function createPayment(input: PaymentInput): Promise<ActionResult> 
 }
 
 export async function deletePayment(id: string): Promise<ActionResult> {
+  const userInfo = await getUserInfo();
+  if (!userInfo) return { success: false, error: 'غير مسجل دخول' };
+  
+  if (userInfo.role === 'secretary' || userInfo.role === 'assistant' || userInfo.role === 'technician') {
+    return { success: false, error: 'غير مصرح لك بحذف المدفوعات' };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from('payments').delete().eq('id', id);
   if (error) return { success: false, error: error.message };
