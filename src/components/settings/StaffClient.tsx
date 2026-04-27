@@ -22,15 +22,20 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
     setIsSubmitting(true);
     setError('');
 
-    const res = await createStaffMember(formData);
-    
-    if (res.success) {
-      // Optimistic update - in a real app you'd fetch the fresh list
-      // but revalidatePath will refresh on next navigation anyway
-      setIsModalOpen(false);
-      window.location.reload(); // Simple way to refresh data
-    } else {
-      setError(res.error || 'حدث خطأ غير معروف');
+    try {
+      const res = await createStaffMember(formData);
+      
+      if (res.success) {
+        // Optimistic update - in a real app you'd fetch the fresh list
+        // but revalidatePath will refresh on next navigation anyway
+        setIsModalOpen(false);
+        window.location.reload(); // Simple way to refresh data
+      } else {
+        setError(res.error || 'حدث خطأ غير معروف');
+        setIsSubmitting(false);
+      }
+    } catch (err: any) {
+      setError('حدث خطأ في الخادم. تأكد من إعدادات SUPABASE_SERVICE_ROLE_KEY.');
       setIsSubmitting(false);
     }
   };
