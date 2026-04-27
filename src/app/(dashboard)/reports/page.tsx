@@ -5,50 +5,43 @@ export default async function ReportsPage() {
   const now = new Date();
   const monthStart = now.toISOString().substring(0, 7) + '-01';
 
-  // Fetch all data in parallel
-  const [paymentsRes, expensesRes, debtsRes, appointmentsRes, patientsRes, labRes] = await Promise.all([
-    supabase.from('payments').select('amount, method, date').gte('date', monthStart),
-    supabase.from('expenses').select('amount, category, type').gte('month', monthStart),
-    supabase.from('debts').select('total_amount, remaining_amount, status'),
-    supabase.from('appointments').select('status, type, date').gte('date', monthStart),
-    supabase.from('patients').select('id, created_at', { count: 'exact' }),
-    supabase.from('lab_orders').select('cost, status'),
-  ]);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  const payments = paymentsRes.data || [];
-  const expenses = expensesRes.data || [];
-  const debts = debtsRes.data || [];
-  const appointments = appointmentsRes.data || [];
-  const totalPatients = patientsRes.count || 0;
-  const labOrders = labRes.data || [];
+  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single();
+  if (!profile) return null;
 
-  const totalRevenue = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  // Call the SQL RPC
+  const { data: stats, error } = await supabase.rpc('get_dashboard_stats', {
+    p_clinic_id: profile.clinic_id,
+    p_month_start: monthStart
+  });
+
+  if (error || !stats) {
+    return <div style={{ padding: 20 }}>Error loading reports: {error?.message}</div>;
+  }
+
+  const totalRevenue = Number((stats as any).totalRevenue) || 0;
+  const totalExpenses = Number((stats as any).totalExpenses) || 0;
+  const totalDebts = Number((stats as any).totalDebts) || 0;
+  const labCosts = Number((stats as any).labCosts) || 0;
+  const totalPatients = Number((stats as any).totalPatients) || 0;
+  const totalAppointments = Number((stats as any).totalAppointments) || 0;
+  const attended = Number((stats as any).attended) || 0;
+  const cancelled = Number((stats as any).cancelled) || 0;
+  
+  const methodTotals = (stats as any).methodTotals as Record<string, number>;
+  const typeTotals = (stats as any).typeTotals as Record<string, number>;
+  const expCats = (stats as any).expCats as Record<string, number>;
+
   const netProfit = totalRevenue - totalExpenses;
-  const totalDebtsAmt = debts.filter(d => d.status !== 'paid').reduce((s, d) => s + Number(d.remaining_amount), 0);
-  const labCosts = labOrders.reduce((s, l) => s + Number(l.cost), 0);
+  const attendanceRate = totalAppointments > 0 ? Math.round((attended / totalAppointments) * 100) : 0;
 
-  // Payment methods breakdown
-  const methodTotals: Record<string, number> = {};
-  payments.forEach(p => { methodTotals[p.method] = (methodTotals[p.method] || 0) + Number(p.amount); });
   const methodLabels: Record<string, string> = { cash: 'كاش', card: 'فيزا', vodafone: 'فودافون', transfer: 'تحويل' };
 
-  // Appointment types breakdown
-  const typeTotals: Record<string, number> = {};
-  appointments.forEach(a => { typeTotals[a.type] = (typeTotals[a.type] || 0) + 1; });
-
-  // Appointment status breakdown
-  const attended = appointments.filter(a => a.status === 'attended').length;
-  const cancelled = appointments.filter(a => a.status === 'cancelled' || a.status === 'no_show').length;
-  const attendanceRate = appointments.length > 0 ? Math.round((attended / appointments.length) * 100) : 0;
-
-  // Expense categories
-  const expCats: Record<string, number> = {};
-  expenses.forEach(e => { expCats[e.category] = (expCats[e.category] || 0) + Number(e.amount); });
-
-  const maxMethodVal = Math.max(...Object.values(methodTotals), 1);
-  const maxTypeVal = Math.max(...Object.values(typeTotals), 1);
-  const maxExpVal = Math.max(...Object.values(expCats), 1);
+  const maxMethodVal = Math.max(...Object.values(methodTotals as Record<string, number>), 1);
+  const maxTypeVal = Math.max(...Object.values(typeTotals as Record<string, number>), 1);
+  const maxExpVal = Math.max(...Object.values(expCats as Record<string, number>), 1);
 
   return (
     <>
@@ -78,7 +71,7 @@ export default async function ReportsPage() {
         </div>
         <div className="stat-card">
           <span className="stat-icon">💳</span>
-          <span className="stat-num count-up" style={{ color: totalDebtsAmt > 0 ? 'var(--gold)' : 'var(--green)' }}>{totalDebtsAmt.toLocaleString()}</span>
+          <span className="stat-num count-up" style={{ color: totalDebts > 0 ? 'var(--gold)' : 'var(--green)' }}>{totalDebts.toLocaleString()}</span>
           <div className="stat-label">ديون معلقة (ج.م)</div>
         </div>
       </div>
@@ -157,7 +150,7 @@ export default async function ReportsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--muted)', fontSize: 13 }}>مواعيد الشهر</span>
-                <span style={{ fontWeight: 800, fontSize: 18 }}>{appointments.length}</span>
+                <span style={{ fontWeight: 800, fontSize: 18 }}>{totalAppointments}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--muted)', fontSize: 13 }}>نسبة الحضور</span>

@@ -162,7 +162,16 @@ export default function PatientsClient({ initialPatients }: PatientsClientProps)
                           {patient.full_name}
                         </a>
                       </td>
-                      <td style={{ direction: 'ltr', textAlign: 'right' }}>{patient.phone || '—'}</td>
+                      <td style={{ direction: 'ltr', textAlign: 'right' }}>
+                        {patient.phone ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                            <span>{patient.phone}</span>
+                            <a href={`https://wa.me/2${patient.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: '#25D366' }} title="واتساب">
+                              💬
+                            </a>
+                          </div>
+                        ) : '—'}
+                      </td>
                       <td>{patient.age || '—'}</td>
                       <td>{patient.gender === 'male' ? 'ذكر' : patient.gender === 'female' ? 'أنثى' : '—'}</td>
                       <td>

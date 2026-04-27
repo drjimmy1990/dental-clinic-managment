@@ -47,6 +47,26 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // RBAC Check for Financial/Admin routes
+  if (user && !isPublicRoute) {
+    const restrictedRoutes = ['/payments', '/debts', '/expenses', '/salaries', '/reports', '/settings'];
+    const isRestrictedRoute = restrictedRoutes.some(route => pathname.startsWith(route));
+
+    if (isRestrictedRoute) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+        
+      if (profile && (profile.role === 'assistant' || profile.role === 'technician')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   // Don't redirect authenticated users away from public routes
   // (avoids loops if profile data is missing)
 

@@ -21,10 +21,18 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1. Sign up user
+      // 1. Sign up user and pass clinic data as metadata
+      // The Postgres trigger on_auth_user_created will automatically create the clinic and user profile
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            clinicName,
+            doctorName,
+            phone: phone || '',
+          }
+        }
       });
 
       if (authError) {
@@ -35,21 +43,6 @@ export default function RegisterPage() {
 
       if (!authData.user) {
         setError('حدث خطأ أثناء إنشاء الحساب');
-        setLoading(false);
-        return;
-      }
-
-      // 2. Use SECURITY DEFINER function to create clinic + user in one call
-      //    This bypasses RLS (which can't work during registration)
-      const { error: rpcError } = await supabase.rpc('register_clinic', {
-        p_user_id: authData.user.id,
-        p_clinic_name: clinicName,
-        p_doctor_name: doctorName,
-        p_phone: phone || '',
-      });
-
-      if (rpcError) {
-        setError('خطأ في إنشاء العيادة: ' + rpcError.message);
         setLoading(false);
         return;
       }

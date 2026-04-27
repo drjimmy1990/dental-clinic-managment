@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import DentalChart from '@/components/dental-chart/DentalChart';
+import PrescriptionsTab from '@/components/patients/PrescriptionsTab';
+import TreatmentPlansTab from '@/components/patients/TreatmentPlansTab';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -43,6 +45,27 @@ export default async function PatientDetailPage({ params }: PageProps) {
 
   const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
+  // Fetch prescriptions
+  const { data: prescriptions } = await supabase
+    .from('prescriptions')
+    .select('*, prescription_items(*)')
+    .eq('patient_id', id)
+    .order('created_at', { ascending: false });
+
+  // Fetch treatment plans
+  const { data: treatmentPlans } = await supabase
+    .from('treatment_plans')
+    .select('*')
+    .eq('patient_id', id)
+    .order('created_at', { ascending: false });
+
+  // Fetch clinic for printing
+  const { data: clinic } = await supabase
+    .from('clinics')
+    .select('name, doctor_name')
+    .eq('id', patient.clinic_id)
+    .single();
+
   return (
     <>
       <div className="sec-header">
@@ -52,7 +75,14 @@ export default async function PatientDetailPage({ params }: PageProps) {
             {patient.full_name}
           </div>
           <div className="sec-sub">
-            {patient.phone && <span style={{ marginLeft: 16 }}>📱 {patient.phone}</span>}
+            {patient.phone && (
+              <span style={{ marginLeft: 16 }}>
+                📱 {patient.phone}
+                <a href={`https://wa.me/2${patient.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', marginRight: 8, fontSize: 18 }} title="واتساب">
+                  💬
+                </a>
+              </span>
+            )}
             {patient.age && <span style={{ marginLeft: 16 }}>🎂 {patient.age} سنة</span>}
             {patient.gender && <span style={{ marginLeft: 16 }}>{patient.gender === 'male' ? '♂️ ذكر' : '♀️ أنثى'}</span>}
           </div>
@@ -102,6 +132,28 @@ export default async function PatientDetailPage({ params }: PageProps) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Prescriptions */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-body">
+          <PrescriptionsTab 
+            patientId={id} 
+            prescriptions={prescriptions || []} 
+            clinicName={clinic?.name} 
+            doctorName={clinic?.doctor_name} 
+          />
+        </div>
+      </div>
+
+      {/* Treatment Plans */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-body">
+          <TreatmentPlansTab 
+            patientId={id} 
+            plans={treatmentPlans || []} 
+          />
         </div>
       </div>
 
