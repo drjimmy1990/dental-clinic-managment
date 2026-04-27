@@ -41,6 +41,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/salaries', icon: '👤', label: 'مرتبات' },
       { href: '/reports', icon: '📈', label: 'تقارير' },
+      { href: '/settings/staff', icon: '👥', label: 'الموظفين' },
       { href: '/settings', icon: '⚙️', label: 'الإعدادات' },
     ],
   },
