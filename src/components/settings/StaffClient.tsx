@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createStaffMember, toggleStaffStatus } from '@/lib/actions/staff';
+import Modal from '@/components/ui/Modal';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
@@ -128,18 +129,11 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={() => !isSubmitting && setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
-            <div className="modal-header">
-              <h3 className="modal-title">إضافة موظف جديد</h3>
-              <button className="modal-close" onClick={() => !isSubmitting && setIsModalOpen(false)}>×</button>
-            </div>
-            
-            {error && <div className="alert-banner alert-red" style={{ margin: '0 20px', marginTop: 20 }}>{error}</div>}
+      <Modal isOpen={isModalOpen} onClose={() => !isSubmitting && setIsModalOpen(false)} title="إضافة موظف جديد">
+        {error && <div className="alert-banner alert-red" style={{ marginBottom: 20 }}>{error}</div>}
 
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
                 <div className="form-group full">
                   <label className="form-label">الاسم الكامل *</label>
                   <input 
@@ -195,10 +189,8 @@ export default function StaffClient({ initialStaff }: { initialStaff: any[] }) {
                   {isSubmitting ? 'جاري الإضافة...' : '+ إضافة الموظف'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </>
   );
 }
