@@ -35,7 +35,6 @@ export default async function PatientDetailPage({ params }: PageProps) {
     .order('date', { ascending: false })
     .limit(10);
 
-  // Fetch patient's payments
   const { data: payments } = await supabase
     .from('payments')
     .select('*')
@@ -44,6 +43,15 @@ export default async function PatientDetailPage({ params }: PageProps) {
     .limit(10);
 
   const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+
+  // Fetch patient's debts
+  const { data: debts } = await supabase
+    .from('debts')
+    .select('*')
+    .eq('patient_id', id)
+    .order('created_at', { ascending: false });
+
+  const totalDebts = debts?.filter(d => d.status !== 'paid').reduce((sum, d) => sum + Number(d.remaining_amount), 0) || 0;
 
   // Fetch prescriptions
   const { data: prescriptions } = await supabase
@@ -116,6 +124,10 @@ export default async function PatientDetailPage({ params }: PageProps) {
                 <div className="summary-item">
                   <span className="summary-val" style={{ color: 'var(--green)' }}>{totalPaid.toLocaleString()}</span>
                   <span className="summary-lbl">إجمالي المدفوع (ج.م)</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-val" style={{ color: totalDebts > 0 ? 'var(--red)' : 'var(--green)' }}>{totalDebts.toLocaleString()}</span>
+                  <span className="summary-lbl">ديون معلقة (ج.م)</span>
                 </div>
               </div>
             </div>
@@ -232,6 +244,51 @@ export default async function PatientDetailPage({ params }: PageProps) {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Debts */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">💳 سجل الديون</span>
+        </div>
+        <div className="card-body">
+          {!debts || debts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>لا توجد ديون مسجلة</div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>التاريخ</th>
+                    <th>الإجمالي</th>
+                    <th>المتبقي</th>
+                    <th>ملاحظات</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {debts.map(d => {
+                    const statusLabels: Record<string, { cls: string; label: string }> = {
+                      pending: { cls: 'badge-red', label: 'غير مسدد' },
+                      partial: { cls: 'badge-gold', label: 'تسديد جزئي' },
+                      paid: { cls: 'badge-green', label: 'مسدد بالكامل' },
+                    };
+                    const badge = statusLabels[d.status] || statusLabels.pending;
+                    return (
+                      <tr key={d.id}>
+                        <td>{new Date(d.created_at).toLocaleDateString('ar-EG')}</td>
+                        <td>{Number(d.total_amount).toLocaleString()} ج.م</td>
+                        <td style={{ fontWeight: 800, color: d.remaining_amount > 0 ? 'var(--red)' : 'inherit' }}>{Number(d.remaining_amount).toLocaleString()} ج.م</td>
+                        <td>{d.notes || '—'}</td>
+                        <td><span className={`badge ${badge.cls}`}>{badge.label}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

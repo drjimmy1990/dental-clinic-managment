@@ -135,7 +135,7 @@ export default function TreatmentPlansTab({ patientId, plans }: { patientId: str
 
           <div className="form-group full">
             <label className="form-label">المبلغ المدفوع (ج.م) *</label>
-            <input className="form-input" type="number" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} required min={1} max={Number(activePayPlan?.total_cost) - Number(activePayPlan?.total_paid)} />
+            <input className="form-input" type="number" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} required min={1} max={activePayPlan ? Number(activePayPlan.total_cost) - Number(activePayPlan.total_paid) : undefined} />
           </div>
           <div className="form-group full">
             <label className="form-label">طريقة الدفع *</label>

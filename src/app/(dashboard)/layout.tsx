@@ -11,7 +11,7 @@ export default async function DashboardLayout({
 
   let clinicName = '';
   let doctorName = '';
-  let userRole = 'assistant';
+  let userRole = 'owner';
 
   if (user) {
     const { data: profile } = await supabase

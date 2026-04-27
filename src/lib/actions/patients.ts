@@ -59,12 +59,33 @@ export async function createPatient(input: PatientInput): Promise<ActionResult> 
     .eq('id', user.id)
     .single();
 
-  if (!profile) return { success: false, error: 'لم يتم العثور على الملف الشخصي' };
+  let clinicId = profile?.clinic_id;
+
+  if (!clinicId) {
+    // Fallback: If user profile is missing (e.g., created before triggers), get the first clinic
+    let { data: fallbackClinic } = await supabase.from('clinics').select('id').limit(1).single();
+    
+    if (!fallbackClinic) {
+      // If no clinic exists at all in the database, create a default one
+      const { data: newClinic, error: clinicErr } = await supabase
+        .from('clinics')
+        .insert({ name: 'عيادتي', doctor_name: 'دكتور' })
+        .select('id')
+        .single();
+        
+      if (clinicErr || !newClinic) {
+        return { success: false, error: 'حدث خطأ في إنشاء العيادة الافتراضية' };
+      }
+      fallbackClinic = newClinic;
+    }
+    
+    clinicId = fallbackClinic.id;
+  }
 
   const { count } = await supabase
     .from('patients')
     .select('id', { count: 'exact', head: true })
-    .eq('clinic_id', profile.clinic_id);
+    .eq('clinic_id', clinicId);
 
   const patientNumber = (count || 0) + 1;
   const code = `P-${patientNumber.toString().padStart(3, '0')}`;
@@ -73,7 +94,7 @@ export async function createPatient(input: PatientInput): Promise<ActionResult> 
     .from('patients')
     .insert({
       ...parsed.data,
-      clinic_id: profile.clinic_id,
+      clinic_id: clinicId,
       code,
     })
     .select()
