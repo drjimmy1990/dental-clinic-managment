@@ -144,3 +144,30 @@ export async function deletePatient(id: string): Promise<ActionResult> {
   revalidatePath('/');
   return { success: true };
 }
+
+export async function searchPatients(query: string) {
+  if (!query || query.length < 2) return [];
+  
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('clinic_id')
+    .eq('id', user.id)
+    .single();
+
+  const clinicId = profile?.clinic_id;
+  if (!clinicId) return [];
+  
+  // Search by name or code
+  const { data } = await supabase
+    .from('patients')
+    .select('id, full_name, code, phone')
+    .eq('clinic_id', clinicId)
+    .or(`full_name.ilike.%${query}%,code.ilike.%${query}%`)
+    .limit(5);
+
+  return data || [];
+}

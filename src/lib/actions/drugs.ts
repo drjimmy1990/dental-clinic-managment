@@ -48,7 +48,7 @@ export async function addFrequentDrug(formData: z.infer<typeof drugSchema>) {
   try {
     const parsed = drugSchema.safeParse(formData);
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0].message };
+      return { success: false, error: parsed.error.issues[0].message };
     }
 
     const { clinicId, role } = await getUserInfo();
