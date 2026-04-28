@@ -4,14 +4,17 @@ import { useState } from 'react';
 import Modal from '../ui/Modal';
 import { createPrescription, deletePrescription } from '@/lib/actions/prescriptions';
 
+import { addFrequentDrug } from '@/lib/actions/drugs';
+
 interface PrescriptionsTabProps {
   patientId: string;
   clinicName?: string;
   doctorName?: string;
   prescriptions: any[]; // will properly type if we had types/index.ts updated
+  frequentDrugs: any[];
 }
 
-export default function PrescriptionsTab({ patientId, clinicName, doctorName, prescriptions }: PrescriptionsTabProps) {
+export default function PrescriptionsTab({ patientId, clinicName, doctorName, prescriptions, frequentDrugs }: PrescriptionsTabProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +35,32 @@ export default function PrescriptionsTab({ patientId, clinicName, doctorName, pr
   const handleItemChange = (index: number, field: string, value: string) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    
+    // Auto-fill if drug name matches a frequent drug
+    if (field === 'drug_name') {
+      const template = frequentDrugs.find(d => d.drug_name === value);
+      if (template) {
+        newItems[index] = {
+          ...newItems[index],
+          dose: template.dose || newItems[index].dose,
+          frequency: template.frequency || newItems[index].frequency,
+          duration: template.duration || newItems[index].duration,
+          notes: template.notes || newItems[index].notes,
+        };
+      }
+    }
+    
     setItems(newItems);
+  };
+
+  const saveToFavorites = async (item: any) => {
+    if (!item.drug_name) return;
+    const res = await addFrequentDrug(item);
+    if (res.success) {
+      alert(`تم حفظ الدواء "${item.drug_name}" في المفضلة بنجاح!`);
+    } else {
+      alert(res.error || 'حدث خطأ أثناء الحفظ');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,14 +151,20 @@ export default function PrescriptionsTab({ patientId, clinicName, doctorName, pr
               <div key={index} style={{ padding: 12, background: 'var(--bg)', borderRadius: 8, position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <strong>دواء {index + 1}</strong>
-                  {items.length > 1 && (
-                    <button type="button" onClick={() => handleRemoveItem(index)} style={{ color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer' }}>حذف ✕</button>
-                  )}
+                  <div>
+                    <button type="button" onClick={() => saveToFavorites(item)} style={{ color: 'var(--teal)', background: 'none', border: 'none', cursor: 'pointer', marginRight: 12, fontSize: 13 }}>⭐ حفظ كمفضل</button>
+                    {items.length > 1 && (
+                      <button type="button" onClick={() => handleRemoveItem(index)} style={{ color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>حذف ✕</button>
+                    )}
+                  </div>
                 </div>
                 <div className="form-grid">
                   <div className="form-group full">
                     <label className="form-label">اسم الدواء *</label>
-                    <input className="form-input" style={{ direction: 'ltr', textAlign: 'left' }} placeholder="e.g. Augmentin 1g" value={item.drug_name} onChange={e => handleItemChange(index, 'drug_name', e.target.value)} required />
+                    <input className="form-input" list="frequent-drugs" style={{ direction: 'ltr', textAlign: 'left' }} placeholder="e.g. Augmentin 1g" value={item.drug_name} onChange={e => handleItemChange(index, 'drug_name', e.target.value)} required />
+                    <datalist id="frequent-drugs">
+                      {frequentDrugs.map(d => <option key={d.id} value={d.drug_name} />)}
+                    </datalist>
                   </div>
                   <div className="form-group">
                     <label className="form-label">الجرعة</label>

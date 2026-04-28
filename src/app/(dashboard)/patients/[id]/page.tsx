@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import DentalChart from '@/components/dental-chart/DentalChart';
 import PrescriptionsTab from '@/components/patients/PrescriptionsTab';
 import TreatmentPlansTab from '@/components/patients/TreatmentPlansTab';
+import { getFrequentDrugs } from '@/lib/actions/drugs';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -73,6 +74,8 @@ export default async function PatientDetailPage({ params }: PageProps) {
     .select('name, doctor_name')
     .eq('id', patient.clinic_id)
     .single();
+
+  const frequentDrugs = await getFrequentDrugs();
 
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = user ? await supabase.from('users').select('role').eq('id', user.id).single() : { data: null };
@@ -158,7 +161,8 @@ export default async function PatientDetailPage({ params }: PageProps) {
             patientId={id} 
             prescriptions={prescriptions || []} 
             clinicName={clinic?.name} 
-            doctorName={clinic?.doctor_name} 
+            doctorName={clinic?.doctor_name}
+            frequentDrugs={frequentDrugs || []}
           />
         </div>
       </div>
