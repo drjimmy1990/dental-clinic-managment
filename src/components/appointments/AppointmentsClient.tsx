@@ -58,6 +58,7 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
   });
 
   const [patientSearch, setPatientSearch] = useState('');
+  const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
 
   const filtered = appointments.filter(a => {
     if (filterDate && a.date !== filterDate) return false;
@@ -227,33 +228,64 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
           {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
 
           <div className="form-grid">
-            <div className="form-group full">
+            <div className="form-group full" style={{ position: 'relative' }}>
               <label className="form-label">المريض *</label>
               <input
                 className="form-input"
-                list="patients-list"
                 placeholder="ابحث باسم المريض أو الكود..."
-                required
                 value={patientSearch}
                 onChange={e => {
-                  const val = e.target.value;
-                  setPatientSearch(val);
-                  
-                  const match = patients.find(p => `${p.full_name} (${p.code})` === val);
-                  if (match) {
-                    setForm(f => ({ ...f, patient_id: match.id }));
-                  } else {
-                    setForm(f => ({ ...f, patient_id: '' }));
-                  }
+                  setPatientSearch(e.target.value);
+                  setIsPatientDropdownOpen(true);
+                  if (form.patient_id) setForm(f => ({ ...f, patient_id: '' }));
                 }}
+                onFocus={() => setIsPatientDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setIsPatientDropdownOpen(false), 200)}
+                required={!form.patient_id}
               />
-              <datalist id="patients-list">
-                {patients.map(p => (
-                  <option key={p.id} value={`${p.full_name} (${p.code})`} />
-                ))}
-              </datalist>
-              {/* Add a hidden input to make the HTML5 required validation work properly if they type garbage */}
-              <input type="hidden" required value={form.patient_id} />
+              {isPatientDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: 250,
+                  overflowY: 'auto',
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  zIndex: 50,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  marginTop: 4
+                }}>
+                  {patients.filter(p => p.full_name.includes(patientSearch) || (p.code && p.code.includes(patientSearch))).length === 0 ? (
+                    <div style={{ padding: 12, textAlign: 'center', color: 'var(--muted)' }}>لا توجد نتائج مطابقة</div>
+                  ) : (
+                    patients
+                      .filter(p => p.full_name.includes(patientSearch) || (p.code && p.code.includes(patientSearch)))
+                      .map(p => (
+                        <div
+                          key={p.id}
+                          style={{
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid var(--border)',
+                            background: form.patient_id === p.id ? 'var(--primary-light)' : 'transparent',
+                          }}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent blur from firing before click
+                            setPatientSearch(`${p.full_name} (${p.code})`);
+                            setForm(f => ({ ...f, patient_id: p.id }));
+                            setIsPatientDropdownOpen(false);
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{p.full_name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>الكود: {p.code} {p.phone && `| ${p.phone}`}</div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">التاريخ *</label>
