@@ -249,13 +249,13 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
                   top: '100%',
                   left: 0,
                   right: 0,
-                  maxHeight: 250,
+                  maxHeight: 180,
                   overflowY: 'auto',
-                  background: 'var(--card-bg)',
+                  background: 'var(--bg2)',
                   border: '1px solid var(--border)',
                   borderRadius: 8,
-                  zIndex: 50,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  zIndex: 9999,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                   marginTop: 4
                 }}>
                   {patients.filter(p => p.full_name.includes(patientSearch) || (p.code && p.code.includes(patientSearch))).length === 0 ? (
@@ -270,13 +270,19 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
                             padding: '10px 12px',
                             cursor: 'pointer',
                             borderBottom: '1px solid var(--border)',
-                            background: form.patient_id === p.id ? 'var(--primary-light)' : 'transparent',
+                            background: form.patient_id === p.id ? 'var(--teal3)' : 'transparent',
                           }}
                           onMouseDown={(e) => {
                             e.preventDefault(); // Prevent blur from firing before click
                             setPatientSearch(`${p.full_name} (${p.code})`);
                             setForm(f => ({ ...f, patient_id: p.id }));
                             setIsPatientDropdownOpen(false);
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--teal3)'}
+                          onMouseLeave={(e) => {
+                            if (form.patient_id !== p.id) {
+                              e.currentTarget.style.background = 'transparent';
+                            }
                           }}
                         >
                           <div style={{ fontWeight: 600, color: 'var(--text)' }}>{p.full_name}</div>
