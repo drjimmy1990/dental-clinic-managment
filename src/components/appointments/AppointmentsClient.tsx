@@ -57,6 +57,8 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
     notes: '',
   });
 
+  const [patientSearch, setPatientSearch] = useState('');
+
   const filtered = appointments.filter(a => {
     if (filterDate && a.date !== filterDate) return false;
     if (filterStatus !== 'all' && a.status !== filterStatus) return false;
@@ -98,6 +100,7 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
     setLoading(false);
     // Reset form
     setForm(f => ({ ...f, patient_id: '', notes: '' }));
+    setPatientSearch('');
   };
 
   const handleStatusChange = async (id: string, status: 'upcoming' | 'attended' | 'postponed' | 'cancelled' | 'no_show') => {
@@ -226,17 +229,31 @@ export default function AppointmentsClient({ initialAppointments, patients }: Ap
           <div className="form-grid">
             <div className="form-group full">
               <label className="form-label">المريض *</label>
-              <select
+              <input
                 className="form-input"
-                value={form.patient_id}
-                onChange={e => setForm(f => ({ ...f, patient_id: e.target.value }))}
+                list="patients-list"
+                placeholder="ابحث باسم المريض أو الكود..."
                 required
-              >
-                <option value="">اختر المريض...</option>
+                value={patientSearch}
+                onChange={e => {
+                  const val = e.target.value;
+                  setPatientSearch(val);
+                  
+                  const match = patients.find(p => `${p.full_name} (${p.code})` === val);
+                  if (match) {
+                    setForm(f => ({ ...f, patient_id: match.id }));
+                  } else {
+                    setForm(f => ({ ...f, patient_id: '' }));
+                  }
+                }}
+              />
+              <datalist id="patients-list">
                 {patients.map(p => (
-                  <option key={p.id} value={p.id}>{p.full_name} ({p.code})</option>
+                  <option key={p.id} value={`${p.full_name} (${p.code})`} />
                 ))}
-              </select>
+              </datalist>
+              {/* Add a hidden input to make the HTML5 required validation work properly if they type garbage */}
+              <input type="hidden" required value={form.patient_id} />
             </div>
             <div className="form-group">
               <label className="form-label">التاريخ *</label>
